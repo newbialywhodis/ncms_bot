@@ -20,10 +20,18 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/ncms_bot
+            cd ~/ncms_bot || { echo "Błąd: folder ~/ncms_bot nie istnieje"; exit 1; }
+
+            echo "Aktualizacja repozytorium..."
             git fetch --all
             git reset --hard origin/main
             git clean -fd
-            bun install --frozen-lockfile
-            pm2 reload ncms-bot --update-env || pm2 restart ncms-bot
-            echo "Deploy zakończony o $(date)"
+
+            echo "Instalacja zależności..."
+            /home/ubuntu/.bun/bin/bun install --frozen-lockfile
+
+            echo "Restart bota..."
+            /home/ubuntu/.bun/bin/pm2 reload ncms-bot --update-env || /home/ubuntu/.bun/bin/pm2 restart ncms-bot
+            /home/ubuntu/.bun/bin/pm2 save
+
+            echo "Deploy zakończony pomyślnie o $(date '+%Y-%m-%d %H:%M:%S')"
