@@ -11,6 +11,7 @@ db.exec(`
     guild_id        TEXT    NOT NULL,
     channel_id      TEXT    NOT NULL,
     message_id      TEXT,
+    ping_message_id TEXT,
     scheduled_time  INTEGER NOT NULL,
     created_by      TEXT    NOT NULL,
     is_active       INTEGER NOT NULL DEFAULT 1,
@@ -39,3 +40,9 @@ db.exec(`
     value TEXT NOT NULL
   );
 `);
+
+// Migracja: dodaj ping_message_id jeśli kolumna nie istnieje
+const columns = db.prepare("PRAGMA table_info(polls)").all() as { name: string }[];
+if (!columns.some((c) => c.name === 'ping_message_id')) {
+  db.exec('ALTER TABLE polls ADD COLUMN ping_message_id TEXT');
+}

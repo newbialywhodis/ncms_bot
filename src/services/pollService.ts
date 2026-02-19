@@ -11,6 +11,7 @@ export interface PollRow {
   guild_id: string;
   channel_id: string;
   message_id: string | null;
+  ping_message_id: string | null;
   scheduled_time: number;
   created_by: string;
   is_active: number;
@@ -63,6 +64,7 @@ export async function createPoll(
   });
 
   // Container z oznaczeniami wysyłany osobno przed ankietą
+  let pingMessageId: string | null = null;
   if (mentions.length > 0) {
     const pingContainer = new ContainerBuilder()
       .setAccentColor(0x00b36b)
@@ -76,16 +78,17 @@ export async function createPoll(
 
     const channel = await interaction.client.channels.fetch(interaction.channelId);
     if (channel?.isSendable()) {
-      await channel.send({
+      const pingMsg = await channel.send({
         components: [pingContainer],
         flags: MessageFlags.IsComponentsV2,
       });
+      pingMessageId = pingMsg.id;
     }
   }
 
   const message = await interaction.editReply(payload);
 
-  db.prepare('UPDATE polls SET message_id = ? WHERE id = ?').run(message.id, pollId);
+  db.prepare('UPDATE polls SET message_id = ?, ping_message_id = ? WHERE id = ?').run(message.id, pingMessageId, pollId);
 }
 
 // ─── Aktualizacja wiadomości ankiety ─────────────────────────────────────────
@@ -244,6 +247,7 @@ export async function createPollFromPanel(
   if (!channel?.isSendable()) return;
 
   // Ping graczy
+  let pingMessageId: string | null = null;
   if (mentions.length > 0) {
     const pingContainer = new ContainerBuilder()
       .setAccentColor(0x00b36b)
@@ -255,14 +259,15 @@ export async function createPollFromPanel(
         text.setContent(mentions),
       );
 
-    await channel.send({
+    const pingMsg = await channel.send({
       components: [pingContainer],
       flags: MessageFlags.IsComponentsV2,
     });
+    pingMessageId = pingMsg.id;
   }
 
   const message = await channel.send(payload);
-  db.prepare('UPDATE polls SET message_id = ? WHERE id = ?').run(message.id, pollId);
+  db.prepare('UPDATE polls SET message_id = ?, ping_message_id = ? WHERE id = ?').run(message.id, pingMessageId, pollId);
 }
 
 // ─── Usunięcie aktywnej ankiety ──────────────────────────────────────────────
@@ -278,13 +283,19 @@ export async function deleteActivePoll(client: Client, guildId: string): Promise
 
   db.prepare('UPDATE polls SET is_active = 0 WHERE id = ?').run(poll.id);
 
-  // Usuń wiadomość ankiety z kanału
-  if (poll.message_id) {
+  // Usuń wiadomości ankiety i pinga z kanału
+  if (poll.message_id || poll.ping_message_id) {
     try {
       const channel = await client.channels.fetch(poll.channel_id);
       if (channel?.isTextBased()) {
-        const msg = await channel.messages.fetch(poll.message_id);
-        await msg.delete();
+        if (poll.message_id) {
+          const msg = await channel.messages.fetch(poll.message_id);
+          await msg.delete();
+        }
+        if (poll.ping_message_id) {
+          const pingMsg = await channel.messages.fetch(poll.ping_message_id);
+          await pingMsg.delete();
+        }
       }
     } catch {
       // Wiadomość już usunięta - ignoruj

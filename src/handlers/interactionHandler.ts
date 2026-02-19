@@ -240,6 +240,8 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
       return;
     }
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     cancelVacation(userId, guildId);
 
     if (config.vacationRoleId && interaction.guild) {
@@ -251,10 +253,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
       }
     }
 
-    await interaction.reply({
-      content: '✅ Urlop anulowany. Wracasz do aktywnych graczy!',
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.editReply('✅ Urlop anulowany. Wracasz do aktywnych graczy!');
 
     refreshVacationPanel(interaction.client).catch((err) =>
       console.error('[interactionHandler] Błąd odświeżania panelu urlopów:', err),
@@ -294,6 +293,8 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
     const userId = interaction.user.id;
     const guildId = interaction.guildId!;
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     setVacation(userId, guildId, isoDate);
 
     if (config.vacationRoleId && interaction.guild) {
@@ -311,10 +312,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
       year: 'numeric',
     });
 
-    await interaction.reply({
-      content: `🏖️ Urlop ustawiony do **${formatted}**. Miłego odpoczynku!`,
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.editReply(`🏖️ Urlop ustawiony do **${formatted}**. Miłego odpoczynku!`);
 
     refreshVacationPanel(interaction.client).catch((err) =>
       console.error('[interactionHandler] Błąd odświeżania panelu urlopów:', err),
