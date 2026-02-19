@@ -1,0 +1,29 @@
+name: Deploy to Oracle VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/ncms_bot
+            git fetch --all
+            git reset --hard origin/main
+            git clean -fd
+            bun install --frozen-lockfile
+            pm2 reload ncms-bot --update-env || pm2 restart ncms-bot
+            echo "Deploy zakończony o $(date)"
