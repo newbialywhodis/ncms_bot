@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\bialy\\\\Desktop\\\\ncms_botv2\" /b /a:-d)",
+      "mcp__ide__getDiagnostics",
+      "Bash(node -e:*)",
+      "Bash(npx tsc:*)",
+      "Bash(bun build:*)"
+    ]
+  }
+}
