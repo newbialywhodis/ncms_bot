@@ -20,6 +20,16 @@ client.once('clientReady', async (c) => {
   await setupPollPanel(c);
 });
 
+// Prosty serwer HTTP dla Render.com, aby uniknąć błędu "No open ports detected"
+const port = process.env.PORT || 10000;
+Bun.serve({
+  port,
+  fetch() {
+    return new Response("Bot is alive!");
+  },
+});
+console.log(`🌐 Serwer HTTP nasłuchuje na porcie ${port}`);
+
 client.on('interactionCreate', async (interaction) => {
   await handleCommand(interaction);
   await handleInteraction(interaction);
