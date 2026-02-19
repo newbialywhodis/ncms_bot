@@ -12,7 +12,7 @@ client.once('clientReady', async (c) => {
   console.log(`✅ Bot zalogowany jako ${c.user.tag}`);
   console.log(`📋 Serwer: ${config.guildId} | Rola graczy: ${config.playerRoleId}`);
   console.log(`🔑 Dozwolone role: ${config.allowedRoleIds.join(', ')}`);
-
+console.log("Test auto-deploy");
   // Ustaw panel urlopów na kanale (tworzy jeśli nie istnieje)
   await setupVacationPanel(c);
 
