@@ -9,7 +9,7 @@ import './database.ts';
 
 client.once('clientReady', async (c) => {
   console.log(`✅ Bot zalogowany jako ${c.user.tag}`);
-  console.log(`📋 Serwer: ${config.guildId} | Rola graczy: ${config.playerRoleId}`);
+  console.log(`📋 Serwer: ${config.guildId} | Rola zawodnika: ${config.playerRoleId}`);
   console.log(`🔑 Dozwolone role: ${config.allowedRoleIds.join(', ')}`);
 
   await setupVacationPanel(c);
