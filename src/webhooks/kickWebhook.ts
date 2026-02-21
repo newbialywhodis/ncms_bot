@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createPublicKey, verify } from 'node:crypto';
 import type { Client } from 'discord.js';
 import { config } from '../config.ts';
 import {
@@ -9,23 +9,35 @@ import {
   type KickLivePayload,
 } from '../services/kickService.ts';
 
-// ─── Weryfikacja sygnatury HMAC ───────────────────────────────────────────────
+// ─── Kick Public Key (RSA) ──────────────────────────────────────────────────
+
+const KICK_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
+6rAhMbQGmQ2SapVcGM3zq8ANXjnhDWocMqfWcTd95btDydITa10kDvHzw9WQOqp2
+MZI7ZyrfzJuz5nhTPCiJwTwnEtWft7nV14BYRDHvlfqPUaZ+1KR4OCaO/wWIk/rQ
+L/TjY0M70gse8rlBkbo2a8rKhu69RQTRsoaf4DVhDPEeSeI5jVrRDGAMGL3cGuyY
+6CLKGdjVEM78g3JfYOvDU/RvfqD7L89TZ3iN94jrmWdGz34JNlEI5hqK8dd7C5EF
+BEbZ5jgB8s8ReQV8H+MkuffjdAj3ajDDX3DOJMIut1lBrUVD1AaSrGCKHooWoL2e
+twIDAQAB
+-----END PUBLIC KEY-----`;
+
+const kickPublicKey = createPublicKey(KICK_PUBLIC_KEY_PEM);
+
+// ─── Weryfikacja sygnatury RSA-SHA256 ────────────────────────────────────────
 
 function verifySignature(headers: Headers, rawBody: string): boolean {
-  if (!config.kickWebhookSecret) return false;
+  const messageId = headers.get('Kick-Event-Message-Id') ?? '';
+  const timestamp = headers.get('Kick-Event-Message-Timestamp') ?? '';
+  const signatureB64 = headers.get('Kick-Event-Signature') ?? '';
 
-  const messageId = headers.get('Kick-Event-MessageId') ?? '';
-  const timestamp = headers.get('Kick-Event-Timestamp') ?? '';
-  const providedSig = headers.get('Kick-Event-Signature') ?? '';
+  if (!messageId || !timestamp || !signatureB64) return false;
 
-  const expected = createHmac('sha256', config.kickWebhookSecret)
-    .update(messageId + timestamp + rawBody)
-    .digest('hex');
-
-  const provided = providedSig.startsWith('sha256=') ? providedSig.slice(7) : providedSig;
+  const payload = `${messageId}.${timestamp}.${rawBody}`;
+  const signature = Buffer.from(signatureB64, 'base64');
+  const hash = createHash('sha256').update(payload).digest();
 
   try {
-    return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(provided, 'hex'));
+    return verify(null, hash, kickPublicKey, signature);
   } catch {
     return false;
   }
@@ -34,8 +46,8 @@ function verifySignature(headers: Headers, rawBody: string): boolean {
 // ─── Start serwera ────────────────────────────────────────────────────────────
 
 export function startKickWebhookServer(client: Client): void {
-  if (!config.kickWebhookSecret || !config.kickChannelSlug || !config.kickDiscordChannelId) {
-    console.log('[kick] Brak konfiguracji (KICK_WEBHOOK_SECRET / KICK_CHANNEL_SLUG / KICK_DISCORD_CHANNEL_ID) – webhook wyłączony.');
+  if (!config.kickChannelSlug || !config.kickDiscordChannelId) {
+    console.log('[kick] Brak konfiguracji (KICK_CHANNEL_SLUG / KICK_DISCORD_CHANNEL_ID) – webhook wyłączony.');
     return;
   }
 
@@ -58,7 +70,7 @@ export function startKickWebhookServer(client: Client): void {
         return new Response('Unauthorized', { status: 401 });
       }
 
-      const eventType = req.headers.get('Kick-Event-SubscriptionType');
+      const eventType = req.headers.get('Kick-Event-Type');
 
       if (eventType === 'livestream.status.updated') {
         const payload = JSON.parse(rawBody) as KickLivePayload;
