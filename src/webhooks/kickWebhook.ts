@@ -66,24 +66,15 @@ export function startKickWebhookServer(client: Client): void {
 
       const rawBody = await req.text();
 
-      console.log('[kick] Otrzymano webhook:', {
-        messageId: req.headers.get('Kick-Event-Message-Id'),
-        timestamp: req.headers.get('Kick-Event-Message-Timestamp'),
-        eventType: req.headers.get('Kick-Event-Type'),
-        hasSig: !!req.headers.get('Kick-Event-Signature'),
-      });
-
       if (!verifySignature(req.headers, rawBody)) {
         console.warn('[kick] Odrzucono żądanie – nieprawidłowa sygnatura.');
         return new Response('Unauthorized', { status: 401 });
       }
 
       const eventType = req.headers.get('Kick-Event-Type');
-      console.log('[kick] Sygnatura OK! Event:', eventType, 'Body:', rawBody);
 
       if (eventType === 'livestream.status.updated') {
         const payload = JSON.parse(rawBody) as KickLivePayload;
-        console.log('[kick] Payload parsed:', { is_live: payload.is_live, slug: payload.broadcaster.channel_slug });
 
         if (payload.is_live) {
           handleStreamLive(client, payload).catch((err) =>
