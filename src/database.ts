@@ -39,6 +39,14 @@ db.exec(`
     key   TEXT NOT NULL PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS kick_stream_state (
+    slug                TEXT    NOT NULL PRIMARY KEY,
+    is_live             INTEGER NOT NULL DEFAULT 0,
+    notification_msg_id TEXT,
+    stream_started_at   INTEGER,
+    updated_at          INTEGER NOT NULL DEFAULT (unixepoch())
+  );
 `);
 
 // Migracja: dodaj ping_message_id jeśli kolumna nie istnieje

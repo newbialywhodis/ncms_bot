@@ -164,7 +164,7 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
 
     const guildId = interaction.guildId!;
     // Ankieta jest wysyłana na kanał ankiet (pollChannelId) lub bieżący kanał
-    const targetChannelId = config.pollChannelId ?? interaction.channelId;
+    const targetChannelId = config.pollChannelId ?? interaction.channelId!;
 
     await createPollFromPanel(
       interaction.client,

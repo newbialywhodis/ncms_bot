@@ -4,6 +4,7 @@ import { handleCommand } from './handlers/commandHandler.ts';
 import { handleInteraction } from './handlers/interactionHandler.ts';
 import { setupVacationPanel } from './utils/vacationPanel.ts';
 import { setupPollPanel } from './utils/pollPanel.ts';
+import { startKickWebhookServer } from './webhooks/kickWebhook.ts';
 
 import './database.ts';
 
@@ -14,6 +15,7 @@ client.once('clientReady', async (c) => {
 
   await setupVacationPanel(c);
   await setupPollPanel(c);
+  startKickWebhookServer(c);
 });
 
 client.on('interactionCreate', async (interaction) => {
