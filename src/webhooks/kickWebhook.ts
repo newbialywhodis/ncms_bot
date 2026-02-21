@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, verify } from 'node:crypto';
+import { createPublicKey, createVerify } from 'node:crypto';
 import type { Client } from 'discord.js';
 import { config } from '../config.ts';
 import {
@@ -34,10 +34,11 @@ function verifySignature(headers: Headers, rawBody: string): boolean {
 
   const payload = `${messageId}.${timestamp}.${rawBody}`;
   const signature = Buffer.from(signatureB64, 'base64');
-  const hash = createHash('sha256').update(payload).digest();
 
   try {
-    return verify(null, hash, kickPublicKey, signature);
+    const verifier = createVerify('SHA256');
+    verifier.update(payload);
+    return verifier.verify(kickPublicKey, signature);
   } catch {
     return false;
   }
@@ -64,6 +65,13 @@ export function startKickWebhookServer(client: Client): void {
       }
 
       const rawBody = await req.text();
+
+      console.log('[kick] Otrzymano webhook:', {
+        messageId: req.headers.get('Kick-Event-Message-Id'),
+        timestamp: req.headers.get('Kick-Event-Message-Timestamp'),
+        eventType: req.headers.get('Kick-Event-Type'),
+        hasSig: !!req.headers.get('Kick-Event-Signature'),
+      });
 
       if (!verifySignature(req.headers, rawBody)) {
         console.warn('[kick] Odrzucono żądanie – nieprawidłowa sygnatura.');
