@@ -79,9 +79,11 @@ export function startKickWebhookServer(client: Client): void {
       }
 
       const eventType = req.headers.get('Kick-Event-Type');
+      console.log('[kick] Sygnatura OK! Event:', eventType, 'Body:', rawBody);
 
       if (eventType === 'livestream.status.updated') {
         const payload = JSON.parse(rawBody) as KickLivePayload;
+        console.log('[kick] Payload parsed:', { is_live: payload.is_live, slug: payload.broadcaster_user_slug });
 
         if (payload.is_live) {
           handleStreamLive(client, payload).catch((err) =>
