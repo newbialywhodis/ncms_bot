@@ -83,7 +83,7 @@ export function startKickWebhookServer(client: Client): void {
 
       if (eventType === 'livestream.status.updated') {
         const payload = JSON.parse(rawBody) as KickLivePayload;
-        console.log('[kick] Payload parsed:', { is_live: payload.is_live, slug: payload.broadcaster_user_slug });
+        console.log('[kick] Payload parsed:', { is_live: payload.is_live, slug: payload.broadcaster.channel_slug });
 
         if (payload.is_live) {
           handleStreamLive(client, payload).catch((err) =>

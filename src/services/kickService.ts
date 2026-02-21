@@ -5,20 +5,19 @@ import { buildLiveNotification, buildStreamEndedNotification } from '../utils/ki
 
 // ─── Typy Kick API ────────────────────────────────────────────────────────────
 
-export interface KickLivestreamData {
-  id: string;
-  session_title: string;
-  viewers: number;
-  thumbnail: { url: string } | null;
-  categories: Array<{ id: number; name: string }>;
-}
-
 export interface KickLivePayload {
-  broadcaster_user_id: number;
-  broadcaster_user_slug: string;
-  broadcaster_user_name: string;
+  broadcaster: {
+    user_id: number;
+    username: string;
+    channel_slug: string;
+    is_anonymous: boolean;
+    is_verified: boolean | null;
+    profile_picture: string | null;
+  };
   is_live: boolean;
-  livestream: KickLivestreamData | null;
+  title: string | null;
+  started_at: string | null;
+  ended_at: string | null;
 }
 
 interface StateRow {
@@ -44,7 +43,8 @@ export function initKickService(): void {
 // ─── Stream wystartował ───────────────────────────────────────────────────────
 
 export async function handleStreamLive(client: Client, payload: KickLivePayload): Promise<void> {
-  const { broadcaster_user_slug: slug, broadcaster_user_name: name, livestream } = payload;
+  const slug = payload.broadcaster.channel_slug;
+  const name = payload.broadcaster.username;
 
   if (slug !== config.kickChannelSlug || !config.kickDiscordChannelId) return;
 
@@ -67,9 +67,9 @@ export async function handleStreamLive(client: Client, payload: KickLivePayload)
     ...buildLiveNotification({
       channelSlug: slug,
       channelName: name,
-      streamTitle: livestream?.session_title ?? 'Bez tytułu',
-      categoryName: livestream?.categories?.[0]?.name ?? null,
-      thumbnailUrl: livestream?.thumbnail?.url ?? null,
+      streamTitle: payload.title ?? 'Bez tytułu',
+      categoryName: null,
+      thumbnailUrl: null,
     }),
     flags: MessageFlags.IsComponentsV2,
   });
@@ -92,7 +92,8 @@ export async function handleStreamLive(client: Client, payload: KickLivePayload)
 // ─── Stream się skończył ──────────────────────────────────────────────────────
 
 export async function handleStreamOffline(client: Client, payload: KickLivePayload): Promise<void> {
-  const { broadcaster_user_slug: slug, broadcaster_user_name: name } = payload;
+  const slug = payload.broadcaster.channel_slug;
+  const name = payload.broadcaster.username;
 
   if (slug !== config.kickChannelSlug || !config.kickDiscordChannelId) return;
 
