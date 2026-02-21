@@ -28,6 +28,30 @@ interface StateRow {
   updated_at: number;
 }
 
+// ─── Pobieranie danych kanału z Kick API ──────────────────────────────────────
+
+async function fetchChannelData(slug: string): Promise<{ thumbnailUrl: string | null; categoryName: string | null }> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (config.kickAccessToken) {
+      headers['Authorization'] = `Bearer ${config.kickAccessToken}`;
+    }
+
+    const res = await fetch(`https://api.kick.com/public/v1/channels?slug=${slug}`, { headers });
+    if (!res.ok) return { thumbnailUrl: null, categoryName: null };
+
+    const json = (await res.json()) as { data: Array<{ stream?: { thumbnail?: string }; category?: { name?: string } }> };
+    const channel = json.data?.[0];
+
+    return {
+      thumbnailUrl: channel?.stream?.thumbnail || null,
+      categoryName: channel?.category?.name || null,
+    };
+  } catch {
+    return { thumbnailUrl: null, categoryName: null };
+  }
+}
+
 // ─── Inicjalizacja ────────────────────────────────────────────────────────────
 
 export function initKickService(): void {
@@ -63,13 +87,15 @@ export async function handleStreamLive(client: Client, payload: KickLivePayload)
     return;
   }
 
+  const channelData = await fetchChannelData(slug);
+
   const message = await channel.send({
     ...buildLiveNotification({
       channelSlug: slug,
       channelName: name,
       streamTitle: payload.title ?? 'Bez tytułu',
-      categoryName: null,
-      thumbnailUrl: null,
+      categoryName: channelData.categoryName,
+      thumbnailUrl: channelData.thumbnailUrl,
     }),
     flags: MessageFlags.IsComponentsV2,
   });
