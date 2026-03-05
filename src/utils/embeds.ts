@@ -2,6 +2,7 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'disc
 
 export interface PollDisplayData {
   pollId: number;
+  title?: string | null;
   scheduledTime: Date;
   presentUsers: string[];
   absentUsers: string[];
@@ -20,13 +21,15 @@ function formatList(ids: string[]): string {
 }
 
 export function buildPollMessage(data: PollDisplayData) {
-  const { pollId, scheduledTime, presentUsers, absentUsers, noResponseCount } = data;
+  const { pollId, title, scheduledTime, presentUsers, absentUsers, noResponseCount } = data;
 
   const date = scheduledTime.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
   const time = scheduledTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 
+  const displayTitle = title || 'Ankieta';
+
   const embed = new EmbedBuilder()
-    .setTitle(`⚽  Ankieta - ${dayName(scheduledTime)}, ${date}  ·  ${time}`)
+    .setTitle(`${displayTitle} - ${dayName(scheduledTime)}, ${date}  ·  ${time}`)
     .setColor(0x00b36b)
     .addFields(
       {

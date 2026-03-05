@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import type { Command } from '../client.ts';
+import { db } from '../database.ts';
 import { hasPermission } from '../utils/permissions.ts';
 import { createPoll } from '../services/pollService.ts';
 
@@ -58,6 +59,12 @@ export const ankieta: Command = {
     }
 
     await interaction.deferReply();
-    await createPoll(interaction, scheduled);
+
+    const storedTitle = db
+      .prepare<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
+      .get('poll_next_title');
+    const title = storedTitle?.value ?? 'Ankieta';
+
+    await createPoll(interaction, scheduled, title);
   },
 };

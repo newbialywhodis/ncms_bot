@@ -4,8 +4,9 @@ import {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  ActionRowBuilder,
+  LabelBuilder,
 } from 'discord.js';
+import { db } from '../database.ts';
 import { handlePollButton, createPollFromPanel, deleteActivePoll, remindActivePollFromPanel } from '../services/pollService.ts';
 import { setVacation, cancelVacation, getVacation } from '../services/vacationService.ts';
 import { config } from '../config.ts';
@@ -43,27 +44,65 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
     const modal = new ModalBuilder()
       .setCustomId('pollpanel:modal')
       .setTitle('📊  Utwórz ankietę')
-      .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId('pollpanel:date')
-            .setLabel('Data (DD-MM-RRRR)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('np. 25-02-2026')
-            .setMinLength(10)
-            .setMaxLength(10)
-            .setRequired(true),
-        ),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId('pollpanel:time')
-            .setLabel('Godzina (HH:MM)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('np. 20:00')
-            .setMinLength(5)
-            .setMaxLength(5)
-            .setRequired(true),
-        ),
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel('Data (DD-MM-RRRR)')
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId('pollpanel:date')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('np. 25-02-2026')
+              .setMinLength(10)
+              .setMaxLength(10)
+              .setRequired(true),
+          ),
+        new LabelBuilder()
+          .setLabel('Godzina (HH:MM)')
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId('pollpanel:time')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('np. 20:00')
+              .setMinLength(5)
+              .setMaxLength(5)
+              .setRequired(true),
+          ),
+      );
+
+    await interaction.showModal(modal);
+    return;
+  }
+
+  // ── Przycisk panelu ankiet: Ustaw tytuł ──────────────────────────────────────
+  if (interaction.isButton() && interaction.customId === 'pollpanel:set_title') {
+    if (!hasPermission(interaction)) {
+      await interaction.reply({
+        content: '❌ Nie masz uprawnień do zmiany tytułu ankiet.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const storedTitle = db
+      .prepare<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
+      .get('poll_next_title');
+
+    const modal = new ModalBuilder()
+      .setCustomId('pollpanel:title_modal')
+      .setTitle('✏️  Ustaw tytuł ankiety')
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel('Tytuł ankiety')
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId('pollpanel:title_input')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('np. Trening, Mecz')
+              .setValue(storedTitle?.value ?? 'Ankieta')
+              .setMinLength(1)
+              .setMaxLength(50)
+              .setRequired(true),
+          ),
       );
 
     await interaction.showModal(modal);
@@ -117,6 +156,25 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
     return;
   }
 
+  // ── Submit modala tytułu ankiety ──────────────────────────────────────────
+  if (interaction.isModalSubmit() && interaction.customId === 'pollpanel:title_modal') {
+    const newTitle = interaction.fields.getTextInputValue('pollpanel:title_input');
+
+    db.prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    ).run('poll_next_title', newTitle);
+
+    await interaction.reply({
+      content: `✅ Tytuł następnej ankiety został ustawiony na: **${newTitle}**`,
+      flags: MessageFlags.Ephemeral,
+    });
+
+    refreshPollPanel(interaction.client).catch((err) =>
+      console.error('[interactionHandler] Błąd odświeżania panelu ankiet:', err),
+    );
+    return;
+  }
+
   // ── Submit modala tworzenia ankiety z panelu ──────────────────────────────
   if (interaction.isModalSubmit() && interaction.customId === 'pollpanel:modal') {
     const dateInput = interaction.fields.getTextInputValue('pollpanel:date');
@@ -166,12 +224,18 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
     // Ankieta jest wysyłana na kanał ankiet (pollChannelId) lub bieżący kanał
     const targetChannelId = config.pollChannelId ?? interaction.channelId!;
 
+    const storedTitle = db
+      .prepare<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
+      .get('poll_next_title');
+    const title = storedTitle?.value ?? 'Ankieta';
+
     await createPollFromPanel(
       interaction.client,
       guildId,
       targetChannelId,
       scheduledTime,
       interaction.user.id,
+      title,
     );
 
     const formatted = scheduledTime.toLocaleDateString('pl-PL', {
@@ -202,17 +266,18 @@ export async function handleInteraction(interaction: Interaction): Promise<void>
     const modal = new ModalBuilder()
       .setCustomId('vacation:modal')
       .setTitle('🏖️  Zadeklaruj urlop')
-      .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId('vacation:date')
-            .setLabel('Data końca urlopu (DD-MM-RRRR)')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('np. 25-02-2026')
-            .setMinLength(10)
-            .setMaxLength(10)
-            .setRequired(true),
-        ),
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel('Data końca urlopu (DD-MM-RRRR)')
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId('vacation:date')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('np. 25-02-2026')
+              .setMinLength(10)
+              .setMaxLength(10)
+              .setRequired(true),
+          ),
       );
 
     await interaction.showModal(modal);

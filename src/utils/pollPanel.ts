@@ -18,6 +18,14 @@ function formatActivePoll(poll: PollRow): string {
 
 export function buildPollPanelPayload(guildId?: string) {
   let activePollInfo = '*Brak aktywnej ankiety*';
+  let nextTitle = 'Ankieta';
+
+  const storedTitle = db
+    .prepare<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
+    .get('poll_next_title');
+  if (storedTitle) {
+    nextTitle = storedTitle.value;
+  }
 
   if (guildId) {
     const poll = db
@@ -39,18 +47,29 @@ export function buildPollPanelPayload(guildId?: string) {
         '**Dostępne akcje:**\n' +
         '• **Utwórz ankietę** - tworzy nową ankietę obecności\n' +
         '• **Usuń ankietę** - dezaktywuje aktywną ankietę\n' +
-        '• **Przypomnij** - wysyła przypomnienie do osób bez odpowiedzi',
+        '• **Przypomnij** - wysyła przypomnienie do osób bez odpowiedzi\n' +
+        '• **Ustaw tytuł** - zmienia tytuł następnej ankiety'
     )
-    .addFields({
-      name: '📋  Aktywna ankieta',
-      value: activePollInfo,
-    });
+    .addFields(
+      {
+        name: '📋  Aktywna ankieta',
+        value: activePollInfo,
+      },
+      {
+        name: '✏️  Tytuł następnej ankiety',
+        value: `**${nextTitle}**`,
+      }
+    );
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('pollpanel:create')
       .setLabel('📊  Utwórz ankietę')
       .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('pollpanel:set_title')
+      .setLabel('✏️  Ustaw tytuł')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('pollpanel:delete')
       .setLabel('🗑️  Usuń ankietę')

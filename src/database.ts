@@ -12,6 +12,7 @@ db.exec(`
     channel_id      TEXT    NOT NULL,
     message_id      TEXT,
     ping_message_id TEXT,
+    title           TEXT,
     scheduled_time  INTEGER NOT NULL,
     created_by      TEXT    NOT NULL,
     is_active       INTEGER NOT NULL DEFAULT 1,
@@ -49,8 +50,11 @@ db.exec(`
   );
 `);
 
-// Migracja: dodaj ping_message_id jeśli kolumna nie istnieje
+// Migracja: dodaj kolumny jeśli nie istnieją
 const columns = db.prepare("PRAGMA table_info(polls)").all() as { name: string }[];
 if (!columns.some((c) => c.name === 'ping_message_id')) {
   db.exec('ALTER TABLE polls ADD COLUMN ping_message_id TEXT');
+}
+if (!columns.some((c) => c.name === 'title')) {
+  db.exec('ALTER TABLE polls ADD COLUMN title TEXT');
 }

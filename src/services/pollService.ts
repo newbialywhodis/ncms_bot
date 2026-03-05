@@ -12,6 +12,7 @@ export interface PollRow {
   channel_id: string;
   message_id: string | null;
   ping_message_id: string | null;
+  title: string | null;
   scheduled_time: number;
   created_by: string;
   is_active: number;
@@ -27,6 +28,7 @@ interface ResponseRow {
 export async function createPoll(
   interaction: ChatInputCommandInteraction,
   scheduledTime: Date,
+  title?: string | null,
 ): Promise<void> {
   const guildId = interaction.guildId!;
   const channelId = interaction.channelId;
@@ -37,10 +39,10 @@ export async function createPoll(
   // Wstaw nową ankietę
   const result = db
     .prepare(
-      `INSERT INTO polls (guild_id, channel_id, scheduled_time, created_by)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO polls (guild_id, channel_id, scheduled_time, created_by, title)
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(guildId, channelId, Math.floor(scheduledTime.getTime() / 1000), interaction.user.id);
+    .run(guildId, channelId, Math.floor(scheduledTime.getTime() / 1000), interaction.user.id, title ?? null);
 
   const pollId = Number(result.lastInsertRowid);
 
@@ -57,6 +59,7 @@ export async function createPoll(
 
   const payload = buildPollMessage({
     pollId,
+    title,
     scheduledTime,
     presentUsers: [],
     absentUsers: [],
@@ -118,6 +121,7 @@ async function refreshPollMessage(client: Client, poll: PollRow): Promise<void> 
   const scheduledTime = new Date(poll.scheduled_time * 1000);
   const payload = buildPollMessage({
     pollId: poll.id,
+    title: poll.title,
     scheduledTime,
     presentUsers,
     absentUsers,
@@ -212,16 +216,17 @@ export async function createPollFromPanel(
   channelId: string,
   scheduledTime: Date,
   createdBy: string,
+  title?: string | null,
 ): Promise<void> {
   // Dezaktywuj poprzednią aktywną ankietę
   db.prepare('UPDATE polls SET is_active = 0 WHERE guild_id = ? AND is_active = 1').run(guildId);
 
   const result = db
     .prepare(
-      `INSERT INTO polls (guild_id, channel_id, scheduled_time, created_by)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO polls (guild_id, channel_id, scheduled_time, created_by, title)
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(guildId, channelId, Math.floor(scheduledTime.getTime() / 1000), createdBy);
+    .run(guildId, channelId, Math.floor(scheduledTime.getTime() / 1000), createdBy, title ?? null);
 
   const pollId = Number(result.lastInsertRowid);
 
@@ -237,6 +242,7 @@ export async function createPollFromPanel(
 
   const payload = buildPollMessage({
     pollId,
+    title,
     scheduledTime,
     presentUsers: [],
     absentUsers: [],
