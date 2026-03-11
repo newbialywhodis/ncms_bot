@@ -67,7 +67,14 @@ function stripManagedPositionSuffix(name: string): string {
     return name;
   }
 
-  const knownLabels = new Set<string>(POSITION_DEFINITIONS.map((position) => position.label));
+  const knownLabels = new Set<string>(
+    POSITION_DEFINITIONS.flatMap((position) => [
+      position.label,
+      position.label.toLocaleLowerCase('pl-PL'),
+      position.choiceName,
+      position.choiceName.toLocaleLowerCase('pl-PL'),
+    ]),
+  );
   if (!parts.every((part) => knownLabels.has(part))) {
     return name;
   }
