@@ -3,6 +3,7 @@ import { config } from './config.ts';
 import { handleCommand } from './handlers/commandHandler.ts';
 import { handleInteraction } from './handlers/interactionHandler.ts';
 import { handleGuildMemberAdd, handleGuildMemberRemove } from './handlers/memberHandler.ts';
+import { handleGuildMemberPositionUpdate } from './handlers/memberPositionHandler.ts';
 import { setupVacationPanel } from './utils/vacationPanel.ts';
 import { setupPollPanel } from './utils/pollPanel.ts';
 import { startKickWebhookServer } from './webhooks/kickWebhook.ts';
@@ -30,6 +31,10 @@ client.on('guildMemberAdd', async (member) => {
 
 client.on('guildMemberRemove', async (member) => {
   await handleGuildMemberRemove(member);
+});
+
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  await handleGuildMemberPositionUpdate(oldMember, newMember);
 });
 
 await client.login(config.token);

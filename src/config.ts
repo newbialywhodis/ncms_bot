@@ -1,3 +1,5 @@
+import type { PositionCode } from './constants/positions.ts';
+
 const required = [
   'DISCORD_TOKEN',
   'DISCORD_CLIENT_ID',
@@ -5,6 +7,31 @@ const required = [
   'PLAYER_ROLE_ID',
   'ALLOWED_ROLES',
 ] as const;
+
+function parseRoleMapping(value: string | undefined): Record<string, string> {
+  if (!value) return {};
+
+  return Object.fromEntries(
+    value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const separatorIndex = entry.indexOf(':');
+        if (separatorIndex === -1) {
+          throw new Error(`Nieprawidlowy wpis POSITION_ROLE_IDS: ${entry}`);
+        }
+
+        const key = entry.slice(0, separatorIndex).trim();
+        const roleId = entry.slice(separatorIndex + 1).trim();
+        if (!key || !roleId) {
+          throw new Error(`Nieprawidlowy wpis POSITION_ROLE_IDS: ${entry}`);
+        }
+
+        return [key, roleId];
+      }),
+  );
+}
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -18,6 +45,9 @@ export const config = {
   guildId: process.env['DISCORD_GUILD_ID']!,
   playerRoleId: process.env['PLAYER_ROLE_ID']!,
   allowedRoleIds: process.env['ALLOWED_ROLES']!.split(',').map((r) => r.trim()).filter(Boolean),
+  positionRoleIdsByCode: parseRoleMapping(process.env['POSITION_ROLE_IDS']) as Partial<
+    Record<PositionCode, string>
+  >,
   vacationChannelId: process.env['VACATION_CHANNEL_ID'] ?? null,
   vacationRoleId: process.env['VACATION_ROLE_ID'] ?? null,
   pollChannelId: process.env['POLL_CHANNEL_ID'] ?? null,
