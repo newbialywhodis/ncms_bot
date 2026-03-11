@@ -17,5 +17,8 @@
   },
   "dependencies": {
     "discord.js": "15.0.0-dev.1753316115-f2fec9177"
+  },
+  "patchedDependencies": {
+    "discord.js@15.0.0-dev.1753316115-f2fec9177": "patches/discord.js@15.0.0-dev.1753316115-f2fec9177.patch"
   }
 }
