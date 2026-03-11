@@ -30,6 +30,9 @@ jobs:
             echo "Instalacja zależności..."
             /home/ubuntu/.bun/bin/bun install --frozen-lockfile
 
+            echo "Rejestracja komend Discord..."
+            /home/ubuntu/.bun/bin/bun run src/deploy-commands.ts
+
             echo "Restart bota..."
             /home/ubuntu/.bun/bin/pm2 reload ncms-bot --update-env || /home/ubuntu/.bun/bin/pm2 restart ncms-bot
             /home/ubuntu/.bun/bin/pm2 save
