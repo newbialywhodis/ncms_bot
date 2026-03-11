@@ -15,6 +15,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "discord.js": "^14.25.1"
+    "discord.js": "15.0.0-dev.1753316115-f2fec9177"
   }
 }

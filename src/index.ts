@@ -2,6 +2,7 @@ import { client } from './client.ts';
 import { config } from './config.ts';
 import { handleCommand } from './handlers/commandHandler.ts';
 import { handleInteraction } from './handlers/interactionHandler.ts';
+import { handleGuildMemberAdd, handleGuildMemberRemove } from './handlers/memberHandler.ts';
 import { setupVacationPanel } from './utils/vacationPanel.ts';
 import { setupPollPanel } from './utils/pollPanel.ts';
 import { startKickWebhookServer } from './webhooks/kickWebhook.ts';
@@ -21,6 +22,14 @@ client.once('clientReady', async (c) => {
 client.on('interactionCreate', async (interaction) => {
   await handleCommand(interaction);
   await handleInteraction(interaction);
+});
+
+client.on('guildMemberAdd', async (member) => {
+  await handleGuildMemberAdd(member);
+});
+
+client.on('guildMemberRemove', async (member) => {
+  await handleGuildMemberRemove(member);
 });
 
 await client.login(config.token);
